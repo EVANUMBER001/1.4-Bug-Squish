@@ -6,30 +6,21 @@ let squishedImage;
 let gameActive = true;
 
 function preload() {
-    // Load the sprite sheet and squished image
-    bugSpriteSheet = loadImage('assets/bugwalkingmane.png', () => {
-        console.log('bugwalkingmane loaded'); // Confirm that the bug walking animation is loaded
-    });
-    squishedImage = loadImage('assets/squashedbuggie.png', () => {
-        console.log('squashedbuggie loaded'); // Confirm that the squished image is loaded
-    });
+    bugSpriteSheet = loadImage('assets/thewalkingbug.png'); // Load the single frame image for walking
+    squishedImage = loadImage('assets/squashedbuggie.png'); // Load the squished bug image
 }
 
 function setup() {
     createCanvas(600, 400);
-    
-    // Create initial bugs
     for (let i = 0; i < 5; i++) {
         bugs.push(new Bug(random(width), random(height)));
     }
-    
-    // Countdown timer
     setInterval(() => { if (timer > 0) timer--; }, 1000);
 }
 
 function draw() {
     background(220);
-    
+
     if (timer <= 0) {
         gameActive = false;
         textSize(32);
@@ -39,14 +30,12 @@ function draw() {
         text(`Score: ${squishedCount}`, width / 2, height / 2 + 40);
         return;
     }
-    
-    // Move and display each bug
+
     for (let bug of bugs) {
         bug.move();
         bug.display();
     }
-    
-    // Display timer and squished count
+
     fill(0);
     textSize(20);
     text(`Time: ${timer}`, 10, 20);
@@ -54,15 +43,14 @@ function draw() {
 }
 
 function mousePressed() {
-    // Check if the user clicked a bug
     for (let i = bugs.length - 1; i >= 0; i--) {
         if (bugs[i].isClicked(mouseX, mouseY)) {
-            bugs.splice(i, 1); // Remove the squished bug
-            squishedCount++; // Increment score
+            bugs[i].squash(); // Squash the bug when clicked
+            squishedCount++;
             for (let bug of bugs) {
-                bug.speedUp(); // Speed up remaining bugs
+                bug.speedUp(); // Speed up the remaining bugs
             }
-            bugs.push(new Bug(random(width), random(height))); // Add a new bug to replace the squished one
+            bugs.push(new Bug(random(width), random(height))); // Add a new bug to replace it
             break;
         }
     }
@@ -72,40 +60,56 @@ class Bug {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.size = 40;
+        this.size = 40; // Bug size (scaled to 40px)
         this.speed = 1;
-        this.direction = p5.Vector.random2D();
-        this.spriteFrame = 0; // Start with the first frame
+        this.direction = p5.Vector.random2D(); // Random direction
+        this.isSquashed = false; // Track if the bug is squashed
     }
-    
+
     move() {
-        this.x += this.direction.x * this.speed;
-        this.y += this.direction.y * this.speed;
-        
-        // Reverse direction if hitting the edges of the canvas
-        if (this.x < 0 || this.x > width) this.direction.x *= -1;
-        if (this.y < 0 || this.y > height) this.direction.y *= -1;
-        
-        // Animate through 3 frames
-        this.spriteFrame = (this.spriteFrame + 0.1) % 3; 
+        // Move the bug in its current direction
+        if (!this.isSquashed) {
+            this.x += this.direction.x * this.speed;
+            this.y += this.direction.y * this.speed;
+
+            // Check for boundary collisions
+            if (this.x < 0 || this.x > width) this.direction.x *= -1;
+            if (this.y < 0 || this.y > height) this.direction.y *= -1;
+        }
     }
-    
+
     display() {
         push();
         translate(this.x, this.y);
         rotate(this.direction.heading());
-        // Draw the current frame from the sprite sheet
-        image(bugSpriteSheet, -this.size / 2, -this.size / 2, this.size, this.size, floor(this.spriteFrame) * 40, 0, 40, 40);
+
+        if (this.isSquashed) {
+            // Display the squished bug image
+            let squishedWidth = squishedImage.width;
+            let squishedHeight = squishedImage.height;
+            let scaleFactor = 40 / squishedWidth; // Resize to 40px
+
+            image(squishedImage, -squishedWidth * scaleFactor / 2, -squishedHeight * scaleFactor / 2, squishedWidth * scaleFactor, squishedHeight * scaleFactor);
+        } else {
+            // Display the walking bug image
+            let bugWidth = bugSpriteSheet.width;
+            let bugHeight = bugSpriteSheet.height;
+            let scaleFactor = 40 / bugWidth; // Resize to 40px
+
+            image(bugSpriteSheet, -bugWidth * scaleFactor / 2, -bugHeight * scaleFactor / 2, bugWidth * scaleFactor, bugHeight * scaleFactor);
+        }
         pop();
     }
-    
+
     isClicked(mx, my) {
-        // Check if the mouse click is within the bug's area
-        return dist(mx, my, this.x, this.y) < this.size / 2;
+        return dist(mx, my, this.x, this.y) < this.size / 2; // Check if clicked on the bug
     }
-    
+
     speedUp() {
-        // Speed up the bug after each squish
-        this.speed *= 1.1;
+        this.speed *= 1.1; // Speed up after each squish
+    }
+
+    squash() {
+        this.isSquashed = true; // Change the state to "squashed"
     }
 }
